@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080913">
+  <meta name="description" content="Explore Julia-set fractals in real time. Built with WebGL2 and the equation z(n+1) = z(n)^2 + c.">
+  <title>Fractal Portal — Interactive Mathematical Art</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --bg:#080912;--panel:#10121d;--line:#242838;--muted:#9296ae;--text:#f6f4ff;--pink:#fa84c5;--accent:#ac92fc; }
+    * {box-sizing:border-box}
+    body {margin:0; background:var(--bg);color:var(--text);min-height:100vh}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    button:focus-visible, input:focus-visible, select:focus-visible, canvas:focus-visible{outline:2px solid #d2b6ff; outline-offset:3px}
+    .noise{pointer-events:none; position:fixed;inset:0; z-index:-1; background:radial-gradient(circle at 84% 20%,#39234948,transparent 35%),radial-gradient(circle at 0% 100%,#14304b30,transparent 30%)}
+    .app{max-width:1740px;margin:auto; padding:24px 30px 32px}
+    .topbar{display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:22px}
+    .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+    .brandicon{width:42px;height:42px;border:1px solid #7c5cb3;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#30244c,#151126);font-size:25px;color:#ffc9fc;box-shadow:0 0 22px #a86cff22}
+    .brandtext{font-weight:850;letter-spacing:.14em;font-size:14px;line-height:1.35}
+    .brandtext span{display:block; font-weight:500; font-size:10px; color:#aca8c0;letter-spacing:.24em;margin-top:3px}
+    .navinfo{display:flex;align-items:center;gap:18px;color:var(--muted);font-size:12px}
+    .navinfo a{color:#d0c8f5;text-decoration:none;border-bottom:1px solid #454055}
+    .labelpill{border:1px solid #3e354f;background:#20182c;border-radius:100px;padding:6px 11px;color:#d8b6fd;font-size:11px;font-weight:700;white-space:nowrap}
+    .intro{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;gap:20px}
+    .eyebrow{color:#ca9aff;font-size:10px;text-transform:uppercase;letter-spacing:.27em;font-weight:850;margin-bottom:9px}
+    h1{font-size:clamp(30px,4vw,55px);font-weight:760;line-height:1.06;letter-spacing:-.045em;margin:0 0 12px}
+    h1 em{font-style:normal; background:linear-gradient(90deg,#fcb9b3,#d2a7ff,#80e1ff); color:transparent;background-clip:text}
+    .subtitle{font-size:13px;line-height:1.6;color:#9fa2b6;margin:0;max-width:730px}
+    .equation{border:1px solid #2b2843;background:#141226bb;padding:13px 20px;border-radius:12px;font-family:Georgia,serif;font-style:italic;font-size:20px;color:#e6d0ff;white-space:nowrap;box-shadow:inset 0 0 30px #2b1d5422}
+    .stage{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:stretch}
+    .viewbox{min-width:0; min-height:540px;position:relative;border:1px solid #2c2942;overflow:hidden;border-radius:18px;background:radial-gradient(circle at center,#19172f,#05050e 72%)}
+    canvas{display:block;width:100%;height:100%;position:absolute;inset:0;touch-action:none;cursor:grab}
+    canvas.dragging{cursor:grabbing}
+    .viewshade{pointer-events:none;position:absolute;inset:0;box-shadow:inset 0 0 100px #05041072}
+    .viewtop{pointer-events:none;position:absolute;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;gap:12px}
+    .mini{background:#0c0b19bd; border:1px solid #352e49; border-radius:9px; padding:8px 12px;backdrop-filter:blur(10px);font-size:10px;font-weight:760; letter-spacing:.12em;color:#d6c5e8}
+    .viewbottom{pointer-events:none;position:absolute;bottom:17px;left:19px;right:19px;display:flex;justify-content:space-between;gap:12px;align-items:flex-end}
+    .viewbottom small{color:#b4add0;font-size:11px;line-height:1.7;text-shadow:0 1px 6px #000}
+    .smallcaps{letter-spacing:.16em;text-transform:uppercase;font-size:10px!important;color:#aca4c9!important}
+    .crosshair{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%);pointer-events:none;opacity:.5}
+    .crosshair:before,.crosshair:after{content:"";position:absolute;background:#bfb8ff65;}
+    .crosshair:before{width:1px;height:18px;left:8px}.crosshair:after{width:18px;height:1px;top:8px}
+    .fallback{display:none;position:absolute;inset:0;z-index:4;align-items:center;justify-content:center;text-align:center;padding:24px;background:#11101e;color:#efdefe}
+    .panel{background:linear-gradient(180deg,#151626,#10111d);border:1px solid #303043;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:18px}
+    .panelhead{display:flex;align-items:center;justify-content:space-between}
+    .paneltitle{font-size:12px;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:#d8d5f1}
+    .live{display:flex;align-items:center;gap:5px;font-size:10px;color:#98efc6;font-weight:750;letter-spacing:.1em}
+    .dot{width:7px;height:7px;border-radius:50%;background:#73ecaf;box-shadow:0 0 8px #73ecaf}
+    .sectionname{color:#9d9fb9;font-size:10px;text-transform:uppercase;letter-spacing:.19em;font-weight:800;margin-bottom:11px}
+    .presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .preset{border:1px solid #343146;border-radius:9px;background:#1c1b2c;color:#d2ccdf;padding:11px 10px;text-align:left;transition:background .15s,border .15s;display:flex;align-items:center;gap:8px;font-weight:650;font-size:12px}
+    .preset:hover{background:#282239}.preset.active{border-color:#ab80f4;background:#302143;box-shadow:inset 0 0 0 1px #8d64c933;color:#fff}
+    .orb{display:inline-block;width:12px;height:12px;border-radius:50%;background:conic-gradient(#85f1ff,#a16bea,#e0b9fa,#85f1ff);box-shadow:0 0 9px #ad95fe99;flex-shrink:0}
+    .orb.ember{background:conic-gradient(#fbce65,#fd6a65,#f83aa6,#fbce65)}.orb.coral{background:conic-gradient(#89ffc7,#248ada,#ffc06e,#89ffc7)}.orb.frost{background:conic-gradient(#e2fffa,#80cfff,#659afa,#e2fffa)}
+    .fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .fieldlabel{display:block;color:#b8b3cc;font-size:11px;margin-bottom:6px;font-weight:650}
+    input[type=number],select{background:#090b17;border:1px solid #3a364f;border-radius:9px;color:#f7efff;width:100%;height:38px;padding:0 10px;min-width:0;font-variant-numeric:tabular-nums}
+    input[type=range]{width:100%;height:22px;accent-color:#b694ff;cursor:pointer}
+    .sliderhead{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;color:#b8b3cc;margin-bottom:3px}
+    output{font-variant-numeric:tabular-nums;color:#eed9ff;font-size:11px;font-weight:850}
+    .sliderbox{margin-top:10px}
+    .separator{border:0;border-top:1px solid #302e40;margin:0}
+    .buttonpair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .btn{border:1px solid #42374f;border-radius:10px;color:#f1eaff;background:#252134;padding:11px 9px;font-weight:750;font-size:12px;transition:transform .1s,filter .12s}
+    .btn:hover{filter:brightness(1.18)}.btn:active{transform:scale(.98)}
+    .btn.primary{background:linear-gradient(105deg,#bc80fb,#ed90c0);border-color:transparent;color:#1f1230;box-shadow:0 7px 22px #c77eff28}
+    .hint{font-size:10px;line-height:1.65;color:#817e9e;margin:0}
+    .note{margin-top:17px;display:flex;justify-content:space-between;gap:12px;align-items:center;color:#88889e;font-size:11px}
+    .note span:last-child{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+    .screen-reader-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    @media(max-width:1100px){.stage{grid-template-columns:minmax(0,1fr) 295px}.panel{padding:14px;gap:13px}.intro{align-items:flex-start}.equation{font-size:16px;padding:10px 13px}}
+    @media(max-width:800px){.app{padding:14px}.navinfo{gap:6px}.labelpill{display:none}.brandtext{font-size:11px}.intro{display:block}.equation{display:inline-block;margin-top:12px}.stage{grid-template-columns:1fr}.viewbox{height:56vh;min-height:350px}.panel{display:grid;grid-template-columns:1fr 1fr;gap:17px}.panelhead{grid-column:1/-1}.actions{grid-column:1/-1}.note{flex-wrap:wrap}}
+    @media(max-width:520px){.topbar{gap:6px}.navinfo{font-size:10px}.brandicon{width:36px;height:36px}.brandtext{letter-spacing:.07em}.panel{display:flex}.viewbox{min-height:330px;height:48vh}.intro h1{font-size:38px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <main class="app">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Fractal Portal home">
+        <div class="brandicon">✺</div><div class="brandtext">FRACTAL PORTAL<span>MATHEMATICAL ART LAB</span></div>
+      </a>
+      <div class="navinfo"><span class="labelpill">NO AI IMAGE GENERATION</span><a href="https://github.com/TimurSlavinskiy/fractal-portal" target="_blank" rel="noopener noreferrer">SOURCE CODE ↗</a></div>
+    </header>
+    <section class="intro" aria-labelledby="page-title">
+      <div><div class="eyebrow">◉ live mathematical rendering / experiment 002</div><h1 id="page-title">Explore the <em>infinite.</em></h1><p class="subtitle">Shape light from numbers. Drag to navigate, scroll to zoom, and transform complex equations into living fractal art — calculated directly in your browser.</p></div>
+      <div class="equation" aria-label="z sub n plus one equals z sub n squared plus c">z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</div>
+    </section>
+    <section class="stage" aria-label="Interactive fractal explorer">
+      <div class="viewbox" id="viewbox">
+        <canvas id="fractal" tabindex="0" aria-label="Julia set fractal visualization. Use mouse drag and scroll to pan and zoom."></canvas>
+        <div class="viewshade"></div><div class="crosshair"></div>
+        <div class="viewtop"><div class="mini">◈ JULIA SET / <span id="view-preset">AURORA</span></div><div class="mini" id="status">INITIALIZING...</div></div>
+        <div class="viewbottom"><small class="smallcaps">MOVE · DRAG &nbsp; / &nbsp; ZOOM · SCROLL</small><small id="coord">RE(c) −0.80000 &nbsp; IM(c) +0.15600</small></div>
+        <div class="fallback" id="fallback" role="alert">WebGL2 is unavailable. Please try a recent version of Chrome, Edge or Firefox with hardware acceleration enabled.</div>
+      </div>
+      <aside class="panel" aria-label="Fractal controls">
+        <div class="panelhead"><div class="paneltitle">Control Laboratory</div><span class="live"><span class="dot"></span> GPU LIVE</span></div>
+        <section><div class="sectionname">01 / Explore a shape</div><div class="presets" id="presets">
+          <button type="button" class="preset active" data-preset="aurora" aria-pressed="true"><span class="orb"></span>Aurora</button>
+          <button type="button" class="preset" data-preset="ember" aria-pressed="false"><span class="orb ember"></span>Ember</button>
+          <button type="button" class="preset" data-preset="coral" aria-pressed="false"><span class="orb coral"></span>Coral</button>
+          <button type="button" class="preset" data-preset="frost" aria-pressed="false"><span class="orb frost"></span>Frost</button>
+        </div></section>
+        <hr class="separator">
+        <section><div class="sectionname">02 / Complex constant <i>c</i></div><div class="fieldrow">
+          <label><span class="fieldlabel">Real · Re(c)</span><input id="real" type="number" value="-0.8" step="0.0001" min="-2" max="2"></label>
+          <label><span class="fieldlabel">Imaginary · Im(c)</span><input id="imag" type="number" value="0.156" step="0.0001" min="-2" max="2"></label>
+        </div><p class="hint" style="margin:8px 0 0">Try tiny changes: even ±0.001 can transform the boundary.</p></section>
+        <hr class="separator">
+        <section><div class="sectionname">03 / Image properties</div>
+          <div class="sliderhead"><label for="zoom">Magnification</label><output id="zoom-value">1.09×</output></div><input id="zoom" type="range" min="0" max="1000" value="0" step="1">
+          <div class="sliderbox"><div class="sliderhead"><label for="iterations">Fractal detail</label><output id="iterations-value">180 steps</output></div><input id="iterations" type="range" min="60" max="280" step="10" value="180"></div>
+          <div class="sliderbox"><div class="sliderhead"><label for="glow">Glow intensity</label><output id="glow-value">75%</output></div><input id="glow" type="range" min="0" max="150" step="5" value="75"></div>
+          <div class="sliderbox"><label class="fieldlabel" for="palette" style="margin-bottom:7px">Color spectrum</label><select id="palette"><option value="aurora">Aurora / cyan & lavender</option><option value="ember">Ember / gold & scarlet</option><option value="coral">Coral / jade & violet</option><option value="frost">Frost / blue & silver</option></select></div>
+        </section>
+        <hr class="separator">
+        <section class="actions"><div class="sectionname">04 / Take the result</div>
+          <div class="buttonpair"><button type="button" id="save" class="btn primary">↓ Save PNG</button><button type="button" id="share" class="btn">↗ Copy link</button></div>
+          <div class="buttonpair" style="margin-top:8px"><button type="button" id="reset" class="btn">↺ Reset view</button><button type="button" id="morph" class="btn" aria-pressed="false">▶ Live morph</button></div>
+          <p class="hint" style="margin-top:9px">No server or image model is used. Each pixel is calculated with a WebGL2 fractal shader. The browser renderer is independent of the Python gallery renderer.</p>
+        </section>
+      </aside>
+    </section>
+    <footer class="note"><span>FRACTAL PORTAL v2.0 &nbsp; · &nbsp; Mathematical exploration in real time &nbsp; · &nbsp; Inspired by the Julia set</span><span id="renderinfo">GPU / awaiting render</span></footer>
+    <div class="screen-reader-only" id="announcement" aria-live="polite"></div>
+  </main>
+<script>
+'use strict';
+(() => {
+  const canvas = document.getElementById('fractal');
+  const message = document.getElementById('announcement');
+  const status = document.getElementById('status');
+  const info = document.getElementById('renderinfo');
+  const gl = canvas.getContext('webgl2', { alpha:false, preserveDrawingBuffer:true, antialias:false, powerPreference:'high-performance' });
+  const cpu = !gl ? canvas.getContext('2d', { alpha: false }) : null;
+  if (!gl && !cpu) { document.getElementById('fallback').style.display = 'flex'; status.textContent = 'CANVAS UNAVAILABLE'; return; }
+  if (!gl) { status.textContent = '● CPU MATH RENDERER'; document.querySelector('.live').innerHTML = '◉ CPU MODE'; }
+  const vertex = `#version 300 es
+  precision highp float;
+  void main(){ vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2); gl_Position=vec4(p*2.0-1.0,0.0,1.0); }`;
+  const fragment = `#version 300 es
+  precision highp float;
+  uniform vec2 u_resolution;
+  uniform vec2 u_center;
+  uniform vec2 u_c;
+  uniform float u_zoom;
+  uniform float u_glow;
+  uniform int u_maxiter;
+  uniform int u_palette;
+  out vec4 outColor;
+  vec2 cmul(vec2 a,vec2 b){return vec2(a.x*b.x-a.y*b.y,a.x*b.y+a.y*b.x);}
+  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+  vec3 spectral(float t,float a){
+    vec3 col0;vec3 col1;vec3 col2;
+    if(u_palette==0){col0=vec3(.06,.91,.98);col1=vec3(.77,.28,.98);col2=vec3(1.,.73,.35);}
+    else if(u_palette==1){col0=vec3(1.,.29,.35);col1=vec3(1.,.78,.30);col2=vec3(.91,.26,.80);}
+    else if(u_palette==2){col0=vec3(.10,.99,.63);col1=vec3(.30,.45,1.);col2=vec3(1.,.75,.37);}
+    else{col0=vec3(.30,.83,1.);col1=vec3(.68,.63,1.);col2=vec3(.94,1.,1.);}
+    float highlight=pow(.5+.5*cos(a),8.0);
+    return mix(mix(col0,col1,t),col2,.34*highlight);
+  }
+  void main(){
+    // One world-space pixel has identical width and height. The browser canvas
+    // uses the same Julia recurrence and derivative as the Python CLI.
+    float pixel=3.45/(u_zoom*u_resolution.x);
+    vec2 pos=(gl_FragCoord.xy-.5*u_resolution)*pixel+u_center;
+    vec2 z=pos; vec2 dz=vec2(1.,0.);
+    float smooth=0.,dist=1.e4,angle=0.;
+    bool escaped=false;
+    for(int i=0;i<300;i++){
+      if(i>=u_maxiter) break;
+      dz=2.*cmul(z,dz);
+      z=cmul(z,z)+u_c;
+      float r=length(z);
+      if(r>16.){
+        smooth=float(i)+2.-log2(log(r));
+        dist=r*log(r)/max(length(dz),1.e-9);
+        angle=atan(z.y,z.x);
+        escaped=true;break;
+      }
+    }
+    vec2 uv=gl_FragCoord.xy/u_resolution;
+    float cloud=exp(-pow((uv.x-.25)*2.0,2.)/0.44-pow((uv.y-.40)*1.35,2.)/0.20);
+    vec3 color=vec3(.013,.015,.043)+vec3(.016,.009,.045)*cloud;
+    if(escaped){
+      float dp=max(dist/pixel,0.);
+      float fine=exp(-pow(dp/1.6,.7));
+      float wide=exp(-pow(dp/11.,.58));
+      float t=.5+.5*cos(.205*smooth+.45*angle);
+      vec3 strand=spectral(1.-t,.41*smooth-.65*angle+1.8);
+      float ribbons=.60+.40*pow(.5+.5*cos(smooth*.64+angle*2.4),3.0);
+      color+=strand*(1.53*fine+u_glow*.40*wide)*ribbons;
+      color+=vec3(.07,.10,.14)*fine;
+    } else {
+      color=vec3(.009,.010,.025);
+    }
+    // Tiny, deterministic procedural stars; never drawn within the Julia set.
+    if(!escaped){} else {
+      vec2 cell=floor(gl_FragCoord.xy/24.);
+      float star=step(.996,hash(cell));
+      vec2 dotpos=fract(gl_FragCoord.xy/24.)-.5;
+      float spark=exp(-dot(dotpos,dotpos)*1100.);
+      color+=star*spark*vec3(.20,.28,.48);
+    }
+    color=1.-exp(-max(color,0.));
+    color=pow(color,vec3(.86));
+    outColor=vec4(clamp(color,0.,1.),1.);
+  }`;
+  function compile(kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+  let program=null;let U={};
+  if (gl) {
+    try {program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program));}
+    catch(error){document.getElementById('fallback').textContent='Shader error: '+error.message;document.getElementById('fallback').style.display='flex';status.textContent='SHADER ERROR';return;}
+    gl.useProgram(program);
+    U=Object.fromEntries(['resolution','center','c','zoom','glow','maxiter','palette'].map(k=>[k,gl.getUniformLocation(program,'u_'+k)]));
+  }
+  const presets={
+    aurora:{real:-.8,imag:.156,zoom:1.09,palette:'aurora'},
+    ember:{real:-.74543,imag:.11301,zoom:1.08,palette:'ember'},
+    coral:{real:-.70176,imag:-.3842,zoom:1.09,palette:'coral'},
+    frost:{real:-.12,imag:.77,zoom:1.10,palette:'frost'}
+  };
+  const paletteKeys=['aurora','ember','coral','frost'];
+  let state={...presets.aurora,cx:0,cy:0,iterations:180,glow:.75,preset:'aurora'};
+  const num=v=>v===null||String(v).trim()===''?null:(Number.isFinite(Number(v))?Number(v):null);
+  const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+  const fmt=v=>Number(v).toFixed(5);
+  const zoomFromSlider=n=>.5*Math.pow(64,n/1000);
+  const sliderFromZoom=z=>clamp(Math.log(z/.5)/Math.log(64)*1000,0,1000);
+  const qs=new URLSearchParams(location.search);
+  const selected=qs.get('preset');if(presets[selected])state={...state,...presets[selected],preset:selected};
+  for(const [q,k,lo,hi] of [['r','real',-2,2],['i','imag',-2,2],['z','zoom',.5,32],['x','cx',-4,4],['y','cy',-4,4],['iter','iterations',60,280],['g','glow',0,1.5]]){
+    if(qs.has(q)){let v=num(qs.get(q));if(v!==null&&v>=lo&&v<=hi)state[k]=v;}
+  }
+  if(paletteKeys.includes(qs.get('palette')))state.palette=qs.get('palette');
+  let raf=0,lastTime=0,drag=null,morph=false,morphStart=0,morphBase=[0,0],frameCount=0;
+  function announce(txt){message.textContent=txt;}
+  function updateUrl(){const p=new URLSearchParams();p.set('preset',state.preset);p.set('r',fmt(state.real));p.set('i',fmt(state.imag));p.set('z',state.zoom.toFixed(5));p.set('x',fmt(state.cx));p.set('y',fmt(state.cy));p.set('iter',String(state.iterations));p.set('palette',state.palette);p.set('g',state.glow.toFixed(2));try{history.replaceState(null,'',location.pathname+'?'+p.toString());}catch(_){/* Standalone previews may use about:blank */}}
+  function sync(){document.getElementById('real').value=state.real;document.getElementById('imag').value=state.imag;document.getElementById('zoom').value=sliderFromZoom(state.zoom);document.getElementById('zoom-value').textContent=state.zoom.toFixed(2)+'×';document.getElementById('iterations').value=state.iterations;document.getElementById('iterations-value').textContent=state.iterations+' steps';document.getElementById('glow').value=Math.round(state.glow*100);document.getElementById('glow-value').textContent=Math.round(state.glow*100)+'%';document.getElementById('palette').value=state.palette;document.getElementById('view-preset').textContent=state.preset.toUpperCase();document.getElementById('coord').textContent='RE(c) '+(state.real>=0?'+':'')+fmt(state.real)+'   IM(c) '+(state.imag>=0?'+':'')+fmt(state.imag);for(const btn of document.querySelectorAll('[data-preset]')){const on=btn.dataset.preset===state.preset;btn.classList.toggle('active',on);btn.setAttribute('aria-pressed',on?'true':'false');}}
+  function size(){const r=canvas.getBoundingClientRect();const dpr=Math.min(devicePixelRatio||1,1.6);const quality=Math.min(1,(gl?1350:690)/(r.width*dpr),(gl?900:470)/(r.height*dpr));const w=Math.max(1,Math.round(r.width*dpr*quality)),h=Math.max(1,Math.round(r.height*dpr*quality));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;if(gl)gl.viewport(0,0,w,h);}return [w,h];}
+  function renderCPU(w,h){
+    // Same Julia recurrence and derivative, deliberately lower resolution to
+    // keep the pure JavaScript fallback usable without hardware acceleration.
+    const image=cpu.createImageData(w,h),data=image.data,scale=3.45/(state.zoom*w);
+    const colors={aurora:[[.06,.91,.98],[.77,.28,.98],[1,.73,.35]],ember:[[1,.29,.35],[1,.78,.3],[.91,.26,.80]],coral:[[.10,.99,.63],[.30,.45,1],[1,.75,.37]],frost:[[.30,.83,1],[.68,.63,1],[.94,1,1]]};
+    const [a,b,highlight]=colors[state.palette];
+    const maxSteps=Math.min(state.iterations,220), cr=state.real,ci=state.imag;
+    for(let y=0;y<h;y++){
+      const zy0=(h*.5-y-.5)*scale+state.cy;
+      for(let x=0;x<w;x++){
+        let zr=(x+.5-w*.5)*scale+state.cx,zi=zy0,dr=1,di=0,escaped=false,sm=0,dist=1e8,angle=0;
+        for(let n=0;n<maxSteps;n++){
+          const ndR=2*(zr*dr-zi*di),ndI=2*(zr*di+zi*dr);
+          const nzr=zr*zr-zi*zi+cr,nzi=2*zr*zi+ci;
+          zr=nzr;zi=nzi;dr=ndR;di=ndI;
+          const r2=zr*zr+zi*zi;
+          if(r2>256){const r=Math.sqrt(r2);sm=n+2-Math.log2(Math.log(r));dist=r*Math.log(r)/Math.max(Math.hypot(dr,di),1e-9);angle=Math.atan2(zi,zr);escaped=true;break;}
+        }
+        const idx=(y*w+x)*4;
+        let rr=.013,gg=.015,bb=.043;
+        if(escaped){
+          const fine=Math.exp(-Math.pow(Math.max(dist/scale,0)/1.6,.7));
+          const wide=Math.exp(-Math.pow(Math.max(dist/scale,0)/11,.58));
+          const t=.5-.5*Math.cos(.205*sm+.45*angle);
+          const accent=Math.pow(.5+.5*Math.cos(.41*sm-.65*angle+1.8),8)*.34;
+          const wave=.60+.40*Math.pow(.5+.5*Math.cos(sm*.64+angle*2.4),3);
+          const intensity=(1.53*fine+state.glow*.40*wide)*wave;
+          rr+=(((a[0]*(1-t)+b[0]*t)*(1-accent)+highlight[0]*accent))*intensity+.07*fine;
+          gg+=(((a[1]*(1-t)+b[1]*t)*(1-accent)+highlight[1]*accent))*intensity+.10*fine;
+          bb+=(((a[2]*(1-t)+b[2]*t)*(1-accent)+highlight[2]*accent))*intensity+.14*fine;
+        }else {rr=.009;gg=.010;bb=.025;}
+        data[idx]=Math.round(255*Math.pow(1-Math.exp(-Math.max(rr,0)),.86));
+        data[idx+1]=Math.round(255*Math.pow(1-Math.exp(-Math.max(gg,0)),.86));
+        data[idx+2]=Math.round(255*Math.pow(1-Math.exp(-Math.max(bb,0)),.86));
+        data[idx+3]=255;
+      }
+    }
+    cpu.putImageData(image,0,0);
+  }
+  function paint(){raf=0;const t=performance.now();const [w,h]=size();
+    if(gl){gl.uniform2f(U.resolution,w,h);gl.uniform2f(U.center,state.cx,state.cy);gl.uniform2f(U.c,state.real,state.imag);gl.uniform1f(U.zoom,state.zoom);gl.uniform1f(U.glow,state.glow);gl.uniform1i(U.maxiter,state.iterations);gl.uniform1i(U.palette,paletteKeys.indexOf(state.palette));gl.drawArrays(gl.TRIANGLES,0,3);}
+    else renderCPU(w,h);
+    frameCount++;status.textContent=gl?'● GPU MATH RENDERED':'● CPU MATH RENDERED';info.textContent=`${gl?'WEBGL2':'CANVAS2D'} / ${w} × ${h} / ${state.iterations} ITERATIONS`;lastTime=t;
+  }
+  function requestPaint(){if(!raf)raf=requestAnimationFrame(paint);}
+  function changed(syncControls=true){if(syncControls)sync();updateUrl();requestPaint();}
+  function stopMorph(){if(!morph)return;morph=false;document.getElementById('morph').textContent='▶ Live morph';document.getElementById('morph').setAttribute('aria-pressed','false');state.real=morphBase[0];state.imag=morphBase[1];changed();}
+  for(const btn of document.querySelectorAll('[data-preset]'))btn.addEventListener('click',()=>{stopMorph();state={...state,...presets[btn.dataset.preset],cx:0,cy:0,preset:btn.dataset.preset};changed();});
+  let typing;
+  for(const [key,id] of [['real','real'],['imag','imag']])document.getElementById(id).addEventListener('input',()=>{clearTimeout(typing);typing=setTimeout(()=>{const v=num(document.getElementById(id).value);if(v!==null&&v>=-2&&v<=2){stopMorph();state[key]=v;changed(false);document.getElementById('coord').textContent='RE(c) '+fmt(state.real)+'   IM(c) '+fmt(state.imag);}},170);});
+  document.getElementById('zoom').addEventListener('input',e=>{state.zoom=zoomFromSlider(+e.target.value);changed();});
+  document.getElementById('iterations').addEventListener('input',e=>{state.iterations=+e.target.value;changed();});
+  document.getElementById('glow').addEventListener('input',e=>{state.glow=+e.target.value/100;changed();});
+  document.getElementById('palette').addEventListener('change',e=>{state.palette=e.target.value;changed();});
+  document.getElementById('reset').addEventListener('click',()=>{stopMorph();state.cx=0;state.cy=0;state.zoom=presets[state.preset].zoom;changed();announce('Camera reset');});
+  function atPoint(clientX,clientY){const r=canvas.getBoundingClientRect(),p=3.45/(state.zoom*canvas.width);const scale=canvas.width/r.width;return {x:state.cx+(clientX-r.left-r.width/2)*p*scale,y:state.cy+(r.height/2-(clientY-r.top))*p*scale};}
+  function zoomAt(clientX,clientY,mult){const old=atPoint(clientX,clientY);state.zoom=clamp(state.zoom*mult,.5,32);const now=atPoint(clientX,clientY);state.cx+=old.x-now.x;state.cy+=old.y-now.y;changed();}
+  canvas.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,Math.exp(-e.deltaY*.0012));},{passive:false});
+  canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;drag={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);canvas.classList.add('dragging');});
+  canvas.addEventListener('pointermove',e=>{if(!drag)return;const r=canvas.getBoundingClientRect(),unit=3.45/(state.zoom*r.width);state.cx-=(e.clientX-drag.x)*unit;state.cy+=(e.clientY-drag.y)*unit;drag={x:e.clientX,y:e.clientY};changed(false);});
+  function release(e){drag=null;canvas.classList.remove('dragging');if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);}
+  canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);
+  canvas.addEventListener('dblclick',e=>zoomAt(e.clientX,e.clientY,1.7));
+  canvas.addEventListener('keydown',e=>{if(['+','=','-','0'].includes(e.key)){e.preventDefault();if(e.key==='0'){state.cx=0;state.cy=0;state.zoom=presets[state.preset].zoom;changed();}else{const r=canvas.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,e.key==='-'?.75:1.35);}}});
+  document.getElementById('save').addEventListener('click',()=>{paint();canvas.toBlob(blob=>{if(!blob){announce('PNG export failed');return;}const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`fractal-portal-${state.preset}-${Date.now()}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);announce('PNG saved');},'image/png');});
+  document.getElementById('share').addEventListener('click',async()=>{updateUrl();const link=location.href;try{await navigator.clipboard.writeText(link);announce('Link copied');document.getElementById('share').textContent='✓ Copied';setTimeout(()=>document.getElementById('share').textContent='↗ Copy link',1600);}catch(_){const input=document.createElement('textarea');input.value=link;document.body.append(input);input.select();document.execCommand('copy');input.remove();announce('Link selected for sharing');}});
+  function morphLoop(t){if(!morph)return;const elapsed=(t-morphStart)*.00016;state.real=morphBase[0]+.006*Math.sin(elapsed);state.imag=morphBase[1]+.006*Math.cos(elapsed)-.006;sync();requestPaint();setTimeout(()=>{if(morph)requestAnimationFrame(morphLoop);},gl?85:380);}
+  document.getElementById('morph').addEventListener('click',()=>{if(morph){stopMorph();announce('Morph paused');return;}morph=true;morphBase=[state.real,state.imag];morphStart=performance.now();document.getElementById('morph').textContent='Ⅱ Stop morph';document.getElementById('morph').setAttribute('aria-pressed','true');requestAnimationFrame(morphLoop);announce('Live morph started');});
+  window.addEventListener('resize',requestPaint);new ResizeObserver(requestPaint).observe(canvas);
+  if(gl)canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();status.textContent='GPU CONTEXT LOST';document.getElementById('fallback').style.display='flex';});
+  sync();requestPaint();
+  // Expose read-only diagnostics to browser smoke tests and accessibility tooling.
+  window.FractalPortalDiagnostics=()=>({palette:state.palette,preset:state.preset,real:state.real,imag:state.imag,zoom:state.zoom,width:canvas.width,height:canvas.height,frameCount,webgl:!!program});
+})();
+</script>
+</body>
+</html>
