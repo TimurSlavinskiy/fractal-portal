@@ -1,134 +1,67 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080913">
-  <meta name="description" content="Explore Julia-set fractals in real time. Built with WebGL2 and the equation z(n+1) = z(n)^2 + c.">
-  <title>Fractal Portal — Interactive Mathematical Art</title>
-  <style>
-    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --bg:#080912;--panel:#10121d;--line:#242838;--muted:#9296ae;--text:#f6f4ff;--pink:#fa84c5;--accent:#ac92fc; }
-    * {box-sizing:border-box}
-    body {margin:0; background:var(--bg);color:var(--text);min-height:100vh}
-    button,input,select{font:inherit}
-    button{cursor:pointer}
-    button:focus-visible, input:focus-visible, select:focus-visible, canvas:focus-visible{outline:2px solid #d2b6ff; outline-offset:3px}
-    .noise{pointer-events:none; position:fixed;inset:0; z-index:-1; background:radial-gradient(circle at 84% 20%,#39234948,transparent 35%),radial-gradient(circle at 0% 100%,#14304b30,transparent 30%)}
-    .app{max-width:1740px;margin:auto; padding:24px 30px 32px}
-    .topbar{display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:22px}
-    .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
-    .brandicon{width:42px;height:42px;border:1px solid #7c5cb3;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#30244c,#151126);font-size:25px;color:#ffc9fc;box-shadow:0 0 22px #a86cff22}
-    .brandtext{font-weight:850;letter-spacing:.14em;font-size:14px;line-height:1.35}
-    .brandtext span{display:block; font-weight:500; font-size:10px; color:#aca8c0;letter-spacing:.24em;margin-top:3px}
-    .navinfo{display:flex;align-items:center;gap:18px;color:var(--muted);font-size:12px}
-    .navinfo a{color:#d0c8f5;text-decoration:none;border-bottom:1px solid #454055}
-    .labelpill{border:1px solid #3e354f;background:#20182c;border-radius:100px;padding:6px 11px;color:#d8b6fd;font-size:11px;font-weight:700;white-space:nowrap}
-    .intro{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;gap:20px}
-    .eyebrow{color:#ca9aff;font-size:10px;text-transform:uppercase;letter-spacing:.27em;font-weight:850;margin-bottom:9px}
-    h1{font-size:clamp(30px,4vw,55px);font-weight:760;line-height:1.06;letter-spacing:-.045em;margin:0 0 12px}
-    h1 em{font-style:normal; background:linear-gradient(90deg,#fcb9b3,#d2a7ff,#80e1ff); color:transparent;background-clip:text}
-    .subtitle{font-size:13px;line-height:1.6;color:#9fa2b6;margin:0;max-width:730px}
-    .equation{border:1px solid #2b2843;background:#141226bb;padding:13px 20px;border-radius:12px;font-family:Georgia,serif;font-style:italic;font-size:20px;color:#e6d0ff;white-space:nowrap;box-shadow:inset 0 0 30px #2b1d5422}
-    .stage{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:stretch}
-    .viewbox{min-width:0; min-height:540px;position:relative;border:1px solid #2c2942;overflow:hidden;border-radius:18px;background:radial-gradient(circle at center,#19172f,#05050e 72%)}
-    canvas{display:block;width:100%;height:100%;position:absolute;inset:0;touch-action:none;cursor:grab}
-    canvas.dragging{cursor:grabbing}
-    .viewshade{pointer-events:none;position:absolute;inset:0;box-shadow:inset 0 0 100px #05041072}
-    .viewtop{pointer-events:none;position:absolute;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;gap:12px}
-    .mini{background:#0c0b19bd; border:1px solid #352e49; border-radius:9px; padding:8px 12px;backdrop-filter:blur(10px);font-size:10px;font-weight:760; letter-spacing:.12em;color:#d6c5e8}
-    .viewbottom{pointer-events:none;position:absolute;bottom:17px;left:19px;right:19px;display:flex;justify-content:space-between;gap:12px;align-items:flex-end}
-    .viewbottom small{color:#b4add0;font-size:11px;line-height:1.7;text-shadow:0 1px 6px #000}
-    .smallcaps{letter-spacing:.16em;text-transform:uppercase;font-size:10px!important;color:#aca4c9!important}
-    .crosshair{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%);pointer-events:none;opacity:.5}
-    .crosshair:before,.crosshair:after{content:"";position:absolute;background:#bfb8ff65;}
-    .crosshair:before{width:1px;height:18px;left:8px}.crosshair:after{width:18px;height:1px;top:8px}
-    .fallback{display:none;position:absolute;inset:0;z-index:4;align-items:center;justify-content:center;text-align:center;padding:24px;background:#11101e;color:#efdefe}
-    .panel{background:linear-gradient(180deg,#151626,#10111d);border:1px solid #303043;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:18px}
-    .panelhead{display:flex;align-items:center;justify-content:space-between}
-    .paneltitle{font-size:12px;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:#d8d5f1}
-    .live{display:flex;align-items:center;gap:5px;font-size:10px;color:#98efc6;font-weight:750;letter-spacing:.1em}
-    .dot{width:7px;height:7px;border-radius:50%;background:#73ecaf;box-shadow:0 0 8px #73ecaf}
-    .sectionname{color:#9d9fb9;font-size:10px;text-transform:uppercase;letter-spacing:.19em;font-weight:800;margin-bottom:11px}
-    .presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-    .preset{border:1px solid #343146;border-radius:9px;background:#1c1b2c;color:#d2ccdf;padding:11px 10px;text-align:left;transition:background .15s,border .15s;display:flex;align-items:center;gap:8px;font-weight:650;font-size:12px}
-    .preset:hover{background:#282239}.preset.active{border-color:#ab80f4;background:#302143;box-shadow:inset 0 0 0 1px #8d64c933;color:#fff}
-    .orb{display:inline-block;width:12px;height:12px;border-radius:50%;background:conic-gradient(#85f1ff,#a16bea,#e0b9fa,#85f1ff);box-shadow:0 0 9px #ad95fe99;flex-shrink:0}
-    .orb.ember{background:conic-gradient(#fbce65,#fd6a65,#f83aa6,#fbce65)}.orb.coral{background:conic-gradient(#89ffc7,#248ada,#ffc06e,#89ffc7)}.orb.frost{background:conic-gradient(#e2fffa,#80cfff,#659afa,#e2fffa)}
-    .fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-    .fieldlabel{display:block;color:#b8b3cc;font-size:11px;margin-bottom:6px;font-weight:650}
-    input[type=number],select{background:#090b17;border:1px solid #3a364f;border-radius:9px;color:#f7efff;width:100%;height:38px;padding:0 10px;min-width:0;font-variant-numeric:tabular-nums}
-    input[type=range]{width:100%;height:22px;accent-color:#b694ff;cursor:pointer}
-    .sliderhead{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;color:#b8b3cc;margin-bottom:3px}
-    output{font-variant-numeric:tabular-nums;color:#eed9ff;font-size:11px;font-weight:850}
-    .sliderbox{margin-top:10px}
-    .separator{border:0;border-top:1px solid #302e40;margin:0}
-    .buttonpair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .btn{border:1px solid #42374f;border-radius:10px;color:#f1eaff;background:#252134;padding:11px 9px;font-weight:750;font-size:12px;transition:transform .1s,filter .12s}
-    .btn:hover{filter:brightness(1.18)}.btn:active{transform:scale(.98)}
-    .btn.primary{background:linear-gradient(105deg,#bc80fb,#ed90c0);border-color:transparent;color:#1f1230;box-shadow:0 7px 22px #c77eff28}
-    .hint{font-size:10px;line-height:1.65;color:#817e9e;margin:0}
-    .note{margin-top:17px;display:flex;justify-content:space-between;gap:12px;align-items:center;color:#88889e;font-size:11px}
-    .note span:last-child{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-    .screen-reader-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    @media(max-width:1100px){.stage{grid-template-columns:minmax(0,1fr) 295px}.panel{padding:14px;gap:13px}.intro{align-items:flex-start}.equation{font-size:16px;padding:10px 13px}}
-    @media(max-width:800px){.app{padding:14px}.navinfo{gap:6px}.labelpill{display:none}.brandtext{font-size:11px}.intro{display:block}.equation{display:inline-block;margin-top:12px}.stage{grid-template-columns:1fr}.viewbox{height:56vh;min-height:350px}.panel{display:grid;grid-template-columns:1fr 1fr;gap:17px}.panelhead{grid-column:1/-1}.actions{grid-column:1/-1}.note{flex-wrap:wrap}}
-    @media(max-width:520px){.topbar{gap:6px}.navinfo{font-size:10px}.brandicon{width:36px;height:36px}.brandtext{letter-spacing:.07em}.panel{display:flex}.viewbox{min-height:330px;height:48vh}.intro h1{font-size:38px}}
-    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b101a">
+<meta name="description" content="Fractal Portal v3: an interactive mathematical laboratory for exploring Julia sets, saving discoveries and creating reproducible artwork.">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>Fractal Portal v3 — Mathematical Explorer</title>
+<style>
+:root{color-scheme:dark;--bg:#0a0d14;--panel:#111722;--panel2:#151c28;--border:#293445;--text:#f3f6fc;--muted:#a4afc1;--subtle:#78869a;--accent:#a9c5f6;--accent2:#719bdc;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{background:var(--bg);color:var(--text);margin:0;min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}a{color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,canvas:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button:disabled{opacity:.37;cursor:default}
+[hidden]{display:none!important}.app{max-width:1640px;padding:0 28px 30px;margin:0 auto}
+.topbar{height:82px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #232c39;gap:16px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}.brandicon{height:43px;width:43px;object-fit:contain}.brandtext{display:flex;flex-direction:column;gap:2px;font-size:15px;letter-spacing:.10em;font-weight:790}.brandtext small{font-size:10px;font-weight:530;letter-spacing:.13em;color:#93a3bb}
+.navright{display:flex;align-items:center;gap:9px}.navbutton,.subtlebutton{border:1px solid transparent;color:#b7c2d3;background:transparent;padding:10px 13px;border-radius:10px;text-decoration:none;font-size:12px;font-weight:680}.navbutton:hover,.subtlebutton:hover{background:#182130;color:#fff}.navbutton.selected{background:#1b2737;color:#e7f0ff;border-color:#354763}.navlink{color:#d7e2f6;text-decoration:none;font-size:12px;padding:9px 0 9px 14px;border-left:1px solid #30394a}
+.hero{display:flex;justify-content:space-between;gap:22px;align-items:flex-end;padding:39px 0 28px}.overline{color:#a9bfe4;font-size:11px;letter-spacing:.20em;font-weight:790;text-transform:uppercase}.hero h1{font-size:clamp(38px,4.5vw,68px);letter-spacing:-.055em;font-weight:780;line-height:1.02;margin:12px 0 12px}.hero h1 span{color:#bbcff3}.lead{color:var(--muted);font-size:13px;line-height:1.65;max-width:620px;margin:0}.mathline{font-size:21px;font-family:Georgia,Times,serif;color:#cddbf2;background:#111824;border:1px solid #2c3a4c;padding:15px 22px;border-radius:12px;white-space:nowrap}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:17px;align-items:stretch}.viewbox{position:relative;overflow:hidden;min-width:0;min-height:590px;border:1px solid #303a49;border-radius:18px;background:#0b0e18}.viewbox:fullscreen{border:0;border-radius:0;background:#0b0e18}.viewbox:fullscreen .viewtop{top:25px}
+canvas{display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}canvas.dragging{cursor:grabbing}
+.viewshade{pointer-events:none;position:absolute;inset:0;box-shadow:inset 0 0 36px #070a12aa}.viewtop{pointer-events:none;position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;gap:10px}.mini{font-size:10px;letter-spacing:.08em;font-weight:710;color:#d5dfef;background:#0b111cd9;border:1px solid #39465abf;border-radius:8px;padding:8px 11px}.viewbottom{position:absolute;bottom:16px;left:16px;right:16px;display:flex;gap:10px;align-items:end;justify-content:space-between;pointer-events:none}.viewbottom small{font-size:10px;color:#bdc8db;background:#0b101bad;padding:5px 8px;border-radius:6px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.crosshair{position:absolute;left:50%;top:50%;width:10px;height:10px;transform:translate(-50%,-50%);pointer-events:none;opacity:.33;border:1px solid #c9d5eb;border-radius:50%}.fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:25px;text-align:center;background:#121723;z-index:5}
+.stage-tools{position:absolute;top:60px;right:15px;display:flex;gap:6px;z-index:2}.tool{pointer-events:auto;border:1px solid #344153;background:#111825de;color:#cad6eb;border-radius:8px;width:34px;height:34px;font-weight:780;font-size:16px}.tool:hover{background:#24324a}
+.panel{background:var(--panel);border:1px solid #293546;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:18px}.panelhead{display:flex;justify-content:space-between;gap:10px;align-items:center}.paneltitle{font-size:13px;font-weight:800;letter-spacing:.035em}.live{font-size:10px;color:#b3e9cc;display:flex;align-items:center;gap:6px}.dot{width:6px;height:6px;border-radius:100%;background:#82d7ab}.sectionname{font-size:10px;font-weight:790;letter-spacing:.15em;text-transform:uppercase;color:#8494a9;margin-bottom:10px}.separator{margin:0;border:0;border-top:1px solid #293646}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}.preset{border:1px solid #313f52;color:#becce1;border-radius:9px;background:#172130;min-height:41px;padding:10px;display:flex;gap:8px;align-items:center;text-align:left;font-size:12px;font-weight:650}.preset:hover{border-color:#627b9f;background:#1d293a}.preset.active{background:#26374d;border-color:#87abdf;color:#fff}.orb{height:8px;width:8px;border-radius:50%;background:#9ec9f9;display:inline-block}.orb.ember{background:#ed9b85}.orb.coral{background:#92d8b9}.orb.frost{background:#d2e3f6}
+.fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fieldlabel{display:block;font-size:11px;color:#b2c0d4;font-weight:610;margin-bottom:6px}.fieldrow input,select{width:100%;min-width:0;min-height:40px;border-radius:9px;background:#0c121c;border:1px solid #354357;color:#e4eaf6;padding:8px 10px;font-variant-numeric:tabular-nums}
+.sliderhead{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#b1c0d4;margin:0 0 3px}output{font-size:11px;font-weight:720;color:#dce8fc;font-variant-numeric:tabular-nums}.sliderbox{margin-top:13px}input[type=range]{width:100%;accent-color:#a9c5f6;cursor:pointer}.hint{font-size:10px;line-height:1.6;color:#8c9caf;margin:7px 0 0}.buttonpair{display:grid;grid-template-columns:1fr 1fr;gap:7px}.btn{border:1px solid #3a4b61;border-radius:9px;color:#d5e0f1;background:#1b2839;padding:10px 9px;font-size:11px;font-weight:740}.btn:hover{background:#293a51}.btn.primary{background:#b8cffa;color:#0e1b2b;border-color:#b8cffa}.btn.primary:hover{background:#d0e0fc}.btn.small{padding:7px 10px}.btn.ghost{background:transparent}.btn.wide{width:100%}
+.sidebar-footer{font-size:10px;line-height:1.6;color:#8e9bb0}.statusline{display:flex;justify-content:space-between;margin:18px 1px 0;gap:12px;font-size:11px;color:#8e9caf}.statusline span:last-child{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.guide{display:flex;gap:10px;align-items:center;padding:12px 14px;background:#101927;border:1px solid #28384c;border-radius:12px;margin-top:16px}.guide strong{font-size:11px}.guide span{font-size:10px;color:#93a3b7}.guidecopy{display:flex;flex-direction:column;gap:3px;flex:1}.guide .btn{white-space:nowrap}
+.drawertarget{margin-top:17px;border:1px solid #2a394b;border-radius:15px;background:#111824;padding:20px}.drawerhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}.drawerhead h2{margin:0;font-size:19px;letter-spacing:-.025em}.saved-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.saved-item{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#162131;border:1px solid #344457;padding:12px;border-radius:11px}.saved-content{display:flex;flex-direction:column;gap:4px;min-width:0}.saved-content strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.saved-content small{font-size:10px;color:#9bacc1}.saved-actions{display:flex;gap:5px}.empty{font-size:12px;color:#a9b5c7}
+.modal-overlay{position:fixed;inset:0;z-index:20;background:#050810cc;display:grid;place-items:center;padding:20px}.modal-box{width:min(450px,100%);padding:25px;border-radius:16px;background:#152031;border:1px solid #435a76;box-shadow:0 25px 90px #000a}.modal-box h2{margin:0 0 8px;font-size:22px}.modal-box p{color:#b7c3d7;font-size:12px;margin:0 0 22px}.modal-box input{width:100%;height:45px;border-radius:9px;background:#0d1522;color:white;border:1px solid #486180;padding:9px 12px}.modalactions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.helptext{font-size:12px;line-height:1.8;color:#c0cee1}.helptext code{background:#243249;border-radius:5px;padding:2px 5px}.screen-reader-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:1080px){.stage{grid-template-columns:minmax(0,1fr) 300px}.panel{padding:16px}.viewbox{min-height:500px}}
+@media(max-width:800px){.app{padding:0 15px 20px}.topbar{height:70px}.navright{gap:2px}.navlink{display:none}.hero{padding:25px 0 22px}.mathline{display:none}.stage{grid-template-columns:1fr}.viewbox{height:55vh;min-height:370px}.panel{display:grid;grid-template-columns:1fr 1fr}.panelhead,.actions{grid-column:1/-1}.saved-list{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.brandtext{font-size:12px}.brandtext small{font-size:8px}.brandicon{height:35px;width:35px}.navbutton{padding:8px 6px;font-size:10px}.hero h1{font-size:40px}.viewbox{height:50vh;min-height:335px}.panel{display:flex}.saved-list{grid-template-columns:1fr}.statusline{flex-wrap:wrap}.viewbottom small{font-size:9px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
 </head>
 <body>
-  <div class="noise"></div>
-  <main class="app">
-    <header class="topbar">
-      <a class="brand" href="./" aria-label="Fractal Portal home">
-        <div class="brandicon">✺</div><div class="brandtext">FRACTAL PORTAL<span>MATHEMATICAL ART LAB</span></div>
-      </a>
-      <div class="navinfo"><span class="labelpill">NO AI IMAGE GENERATION</span><a href="https://github.com/TimurSlavinskiy/fractal-portal" target="_blank" rel="noopener noreferrer">SOURCE CODE ↗</a></div>
-    </header>
-    <section class="intro" aria-labelledby="page-title">
-      <div><div class="eyebrow">◉ live mathematical rendering / experiment 002</div><h1 id="page-title">Explore the <em>infinite.</em></h1><p class="subtitle">Shape light from numbers. Drag to navigate, scroll to zoom, and transform complex equations into living fractal art — calculated directly in your browser.</p></div>
-      <div class="equation" aria-label="z sub n plus one equals z sub n squared plus c">z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</div>
-    </section>
-    <section class="stage" aria-label="Interactive fractal explorer">
-      <div class="viewbox" id="viewbox">
-        <canvas id="fractal" tabindex="0" aria-label="Julia set fractal visualization. Use mouse drag and scroll to pan and zoom."></canvas>
-        <div class="viewshade"></div><div class="crosshair"></div>
-        <div class="viewtop"><div class="mini">◈ JULIA SET / <span id="view-preset">AURORA</span></div><div class="mini" id="status">INITIALIZING...</div></div>
-        <div class="viewbottom"><small class="smallcaps">MOVE · DRAG &nbsp; / &nbsp; ZOOM · SCROLL</small><small id="coord">RE(c) −0.80000 &nbsp; IM(c) +0.15600</small></div>
-        <div class="fallback" id="fallback" role="alert">WebGL2 is unavailable. Please try a recent version of Chrome, Edge or Firefox with hardware acceleration enabled.</div>
-      </div>
-      <aside class="panel" aria-label="Fractal controls">
-        <div class="panelhead"><div class="paneltitle">Control Laboratory</div><span class="live"><span class="dot"></span> GPU LIVE</span></div>
-        <section><div class="sectionname">01 / Explore a shape</div><div class="presets" id="presets">
-          <button type="button" class="preset active" data-preset="aurora" aria-pressed="true"><span class="orb"></span>Aurora</button>
-          <button type="button" class="preset" data-preset="ember" aria-pressed="false"><span class="orb ember"></span>Ember</button>
-          <button type="button" class="preset" data-preset="coral" aria-pressed="false"><span class="orb coral"></span>Coral</button>
-          <button type="button" class="preset" data-preset="frost" aria-pressed="false"><span class="orb frost"></span>Frost</button>
-        </div></section>
-        <hr class="separator">
-        <section><div class="sectionname">02 / Complex constant <i>c</i></div><div class="fieldrow">
-          <label><span class="fieldlabel">Real · Re(c)</span><input id="real" type="number" value="-0.8" step="0.0001" min="-2" max="2"></label>
-          <label><span class="fieldlabel">Imaginary · Im(c)</span><input id="imag" type="number" value="0.156" step="0.0001" min="-2" max="2"></label>
-        </div><p class="hint" style="margin:8px 0 0">Try tiny changes: even ±0.001 can transform the boundary.</p></section>
-        <hr class="separator">
-        <section><div class="sectionname">03 / Image properties</div>
-          <div class="sliderhead"><label for="zoom">Magnification</label><output id="zoom-value">1.09×</output></div><input id="zoom" type="range" min="0" max="1000" value="0" step="1">
-          <div class="sliderbox"><div class="sliderhead"><label for="iterations">Fractal detail</label><output id="iterations-value">180 steps</output></div><input id="iterations" type="range" min="60" max="280" step="10" value="180"></div>
-          <div class="sliderbox"><div class="sliderhead"><label for="glow">Glow intensity</label><output id="glow-value">75%</output></div><input id="glow" type="range" min="0" max="150" step="5" value="75"></div>
-          <div class="sliderbox"><label class="fieldlabel" for="palette" style="margin-bottom:7px">Color spectrum</label><select id="palette"><option value="aurora">Aurora / cyan & lavender</option><option value="ember">Ember / gold & scarlet</option><option value="coral">Coral / jade & violet</option><option value="frost">Frost / blue & silver</option></select></div>
-        </section>
-        <hr class="separator">
-        <section class="actions"><div class="sectionname">04 / Take the result</div>
-          <div class="buttonpair"><button type="button" id="save" class="btn primary">↓ Save PNG</button><button type="button" id="share" class="btn">↗ Copy link</button></div>
-          <div class="buttonpair" style="margin-top:8px"><button type="button" id="reset" class="btn">↺ Reset view</button><button type="button" id="morph" class="btn" aria-pressed="false">▶ Live morph</button></div>
-          <p class="hint" style="margin-top:9px">No server or image model is used. Each pixel is calculated with a WebGL2 fractal shader. The browser renderer is independent of the Python gallery renderer.</p>
-        </section>
-      </aside>
-    </section>
-    <footer class="note"><span>FRACTAL PORTAL v2.0 &nbsp; · &nbsp; Mathematical exploration in real time &nbsp; · &nbsp; Inspired by the Julia set</span><span id="renderinfo">GPU / awaiting render</span></footer>
-    <div class="screen-reader-only" id="announcement" aria-live="polite"></div>
-  </main>
+<main class="app">
+<header class="topbar"><a class="brand" href="./" aria-label="Fractal Portal home"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="brandicon" width="43" height="43" aria-hidden="true" focusable="false"><defs><linearGradient id="ink" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#d4ddf8"/><stop offset="55%" stop-color="#aabfea"/><stop offset="100%" stop-color="#869ed5"/></linearGradient></defs>
+<!-- An open portal, deliberately asymmetrical rather than atomic orbits -->
+<path d="M 323 103 C 289 82 247 75 209 85 C 130 106 88 176 96 253 C 104 330 174 395 255 397 C 329 399 392 348 403 279" fill="none" stroke="url(#ink)" stroke-width="36" stroke-linecap="round"/>
+<!-- Recursion: a smaller spiral echo with a different opening -->
+<path d="M 347 214 C 338 173 300 139 257 139 C 201 139 157 183 157 238 C 157 291 198 331 248 331 C 292 331 326 304 329 266" fill="none" stroke="url(#ink)" stroke-width="34" stroke-linecap="round"/>
+<!-- Distinctive offset square/seed: z -> z squared + c -->
+<rect x="225" y="213" width="57" height="57" rx="12" transform="rotate(35 253.5 241.5)" fill="url(#ink)"/></svg><span class="brandtext">FRACTAL PORTAL<small>MATHEMATICAL EXPLORER</small></span></a>
+<nav class="navright" aria-label="Main navigation"><button id="saved-toggle" class="navbutton" type="button" aria-expanded="false">Saved <span id="saved-count">0</span></button><button id="help-toggle" class="navbutton" type="button">Guide</button><a class="navlink" href="https://github.com/TimurSlavinskiy/fractal-portal" target="_blank" rel="noopener noreferrer">GitHub ↗</a></nav></header>
+<section class="hero"><div><div class="overline">Version 3.0 / Mathematics in motion</div><h1>Explore the <span>infinite.</span></h1><p class="lead">A mathematical playground for complex numbers. Navigate the Julia set, capture your discoveries, and create procedural images directly in your browser.</p></div><div class="mathline" aria-label="z sub n plus one equals z sub n squared plus c">z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</div></section>
+<section class="stage" aria-label="Fractal laboratory">
+<div class="viewbox" id="viewbox"><canvas id="fractal" tabindex="0" aria-label="Julia set fractal. Drag to move, scroll to zoom. The plus, minus and zero keys also control the view."></canvas><div class="viewshade"></div><div class="crosshair"></div><div class="viewtop"><span class="mini">JULIA SET / <span id="view-preset">AURORA</span></span><span class="mini" id="status">INITIALIZING</span></div><div class="stage-tools"><button type="button" id="undo" class="tool" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button><button type="button" id="redo" class="tool" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button><button type="button" id="fullscreen" class="tool" title="Fullscreen" aria-label="Fullscreen">⛶</button></div><div class="viewbottom"><small>DRAG TO MOVE · SCROLL TO ZOOM</small><small id="coord">RE(c) −0.80000 · IM(c) +0.15600</small></div><div class="fallback" id="fallback" role="alert">Canvas rendering is unavailable on this browser.</div></div>
+<aside class="panel" aria-label="Fractal controls"><div class="panelhead"><span class="paneltitle">Control laboratory</span><span class="live"><span class="dot"></span> GPU LIVE</span></div>
+<section><div class="sectionname">01 / Start with a shape</div><div class="presets" id="presets"><button class="preset active" type="button" data-preset="aurora" aria-pressed="true"><span class="orb"></span>Aurora</button><button class="preset" type="button" data-preset="ember" aria-pressed="false"><span class="orb ember"></span>Ember</button><button class="preset" type="button" data-preset="coral" aria-pressed="false"><span class="orb coral"></span>Coral</button><button class="preset" type="button" data-preset="frost" aria-pressed="false"><span class="orb frost"></span>Frost</button></div></section>
+<hr class="separator"><section><div class="sectionname">02 / Complex parameter c</div><div class="fieldrow"><label><span class="fieldlabel">Real · Re(c)</span><input id="real" type="text" inputmode="decimal" value="-0.8" aria-label="Real part of c"></label><label><span class="fieldlabel">Imaginary · Im(c)</span><input id="imag" type="text" inputmode="decimal" value="0.156" aria-label="Imaginary part of c"></label></div><p class="hint">Tiny changes in c can transform the fractal boundary.</p></section>
+<hr class="separator"><section><div class="sectionname">03 / Image settings</div><div class="sliderhead"><label for="zoom">Magnification</label><output id="zoom-value">1.09×</output></div><input id="zoom" type="range" min="0" max="1000" value="0" step="1"><div class="sliderbox"><div class="sliderhead"><label for="iterations">Iteration limit</label><output id="iterations-value">180 steps</output></div><input id="iterations" type="range" min="60" max="280" value="180" step="10"></div><div class="sliderbox"><div class="sliderhead"><label for="glow">Glow intensity</label><output id="glow-value">75%</output></div><input id="glow" type="range" min="0" max="150" value="75" step="5"></div><div class="sliderbox"><label class="fieldlabel" for="palette">Color palette</label><select id="palette"><option value="aurora">Aurora — blue / violet</option><option value="ember">Ember — gold / coral</option><option value="coral">Coral — green / blue</option><option value="frost">Frost — blue / silver</option></select></div></section>
+<hr class="separator"><section class="actions"><div class="sectionname">04 / Make it yours</div><div class="buttonpair"><button class="btn primary" type="button" id="save">↓ Save PNG</button><button class="btn" type="button" id="export-hd">↓ Export 2×</button></div><div class="buttonpair" style="margin-top:8px"><button class="btn" type="button" id="save-discovery">☆ Save location</button><button class="btn" type="button" id="share">↗ Copy link</button></div><div class="buttonpair" style="margin-top:8px"><button class="btn" type="button" id="reset">↺ Reset view</button><button class="btn" type="button" id="morph" aria-pressed="false">Animate</button></div></section>
+<div class="sidebar-footer">Calculated from Julia-set equations, not generated by an image model. The GPU and CPU renderers use the same recurrence with different output quality.</div>
+</aside></section>
+<div class="guide"><div class="guidecopy"><strong>Mathematical journeys</strong><span id="tour-note">Explore four interesting Julia-set configurations with one click.</span></div><button class="btn" type="button" id="tour">Next destination ↗</button></div>
+<div id="saved-panel" class="drawertarget" hidden><div class="drawerhead"><h2>Your discoveries</h2><div><button id="clear-saved" class="subtlebutton" type="button">Clear all</button><button id="saved-close" class="subtlebutton" type="button">Close ×</button></div></div><div id="saved-list" class="saved-list"></div><p class="hint">Saved only in this browser. For a portable discovery use Copy link.</p></div>
+<div id="help-panel" class="drawertarget" hidden><div class="drawerhead"><h2>How to explore</h2><button type="button" class="subtlebutton" id="help-close">Close ×</button></div><div class="helptext">Each canvas pixel starts at a complex coordinate <em>z</em>. Repeated application of <code>z → z² + c</code> reveals the Julia set. Scroll or use <code>+</code> and <code>−</code> to zoom; drag or use touch to move; press <code>0</code> to reset. Use <code>Ctrl+Z</code> and <code>Ctrl+Shift+Z</code> for history. Zoom is intentionally limited to 32×: conventional GPU floating-point precision is not sufficient for arbitrary deep zoom. The visual glow is an artistic interpretation, not a mathematical invariant.</div></div>
+<footer class="statusline"><span>FRACTAL PORTAL v3.0 · Open mathematical art laboratory · <a href="https://github.com/TimurSlavinskiy/fractal-portal" target="_blank" rel="noopener noreferrer">Source code</a></span><span id="renderinfo">Initializing renderer...</span></footer><div class="screen-reader-only" id="announcement" aria-live="polite"></div>
+</main>
+<div class="modal-overlay" id="save-modal" hidden role="presentation"><form id="discovery-form" class="modal-box" role="dialog" aria-modal="true" aria-labelledby="save-title"><h2 id="save-title">Save this discovery</h2><p>Keep the current Julia-set parameters in your browser.</p><label for="discovery-name" class="fieldlabel">Discovery name</label><input id="discovery-name" maxlength="70" required type="text" autocomplete="off"><div class="modalactions"><button type="button" id="modal-cancel" class="btn">Cancel</button><button type="submit" class="btn primary">Save discovery</button></div></form></div>
 <script>
+
 'use strict';
 (() => {
   let canvas = document.getElementById('fractal');
@@ -138,7 +71,7 @@
   let gl = canvas.getContext('webgl2', { alpha:false, preserveDrawingBuffer:true, antialias:false, powerPreference:'high-performance' });
   let cpu = !gl ? canvas.getContext('2d', { alpha: false }) : null;
   if (!gl && !cpu) { document.getElementById('fallback').style.display = 'flex'; status.textContent = 'CANVAS UNAVAILABLE'; return; }
-  if (!gl) { status.textContent = '● CPU MATH RENDERER'; document.querySelector('.live').innerHTML = '◉ CPU MODE'; }
+  if (!gl) { status.textContent = '● CPU MATH RENDERER'; document.querySelector('.live').textContent = 'CPU renderer'; }
   const vertex = `#version 300 es
   precision highp float;
   void main(){ vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2); gl_Position=vec4(p*2.0-1.0,0.0,1.0); }`;
@@ -238,7 +171,7 @@
         return;
       }
       status.textContent='● CPU MATH RENDERER';
-      document.querySelector('.live').textContent='◉ CPU MODE';
+      document.querySelector('.live').textContent='CPU renderer';
     }
   }
   const presets={
@@ -249,7 +182,7 @@
   };
   const paletteKeys=['aurora','ember','coral','frost'];
   let state={...presets.aurora,cx:0,cy:0,iterations:180,glow:.75,preset:'aurora'};
-  const num=v=>v===null||String(v).trim()===''?null:(Number.isFinite(Number(v))?Number(v):null);
+  const num=v=>v===null||String(v).trim()===''?null:(Number.isFinite(Number(String(v).trim().replace(',', '.')))?Number(String(v).trim().replace(',', '.')):null);
   const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
   const fmt=v=>Number(v).toFixed(5);
   const zoomFromSlider=n=>.5*Math.pow(64,n/1000);
@@ -310,8 +243,9 @@
     frameCount++;status.textContent=gl?'● GPU MATH RENDERED':'● CPU MATH RENDERED';info.textContent=`${gl?'WEBGL2':'CANVAS2D'} / ${w} × ${h} / ${state.iterations} ITERATIONS`;lastTime=t;
   }
   function requestPaint(){if(!raf)raf=requestAnimationFrame(paint);}
-  function changed(syncControls=true){if(syncControls)sync();updateUrl();requestPaint();}
-  function stopMorph(){if(!morph)return;morph=false;document.getElementById('morph').textContent='▶ Live morph';document.getElementById('morph').setAttribute('aria-pressed','false');state.real=morphBase[0];state.imag=morphBase[1];changed();}
+  let historyDebounce=0,restoringHistory=false;
+  function changed(syncControls=true){if(syncControls)sync();updateUrl();requestPaint();if(!restoringHistory){clearTimeout(historyDebounce);historyDebounce=setTimeout(markHistoryBoundary,220);}}
+  function stopMorph(){if(!morph)return;morph=false;document.getElementById('morph').textContent='Animate';document.getElementById('morph').setAttribute('aria-pressed','false');state.real=morphBase[0];state.imag=morphBase[1];changed();}
   for(const btn of document.querySelectorAll('[data-preset]'))btn.addEventListener('click',()=>{stopMorph();state={...state,...presets[btn.dataset.preset],cx:0,cy:0,preset:btn.dataset.preset};changed();});
   let typing;
   for(const [key,id] of [['real','real'],['imag','imag']])document.getElementById(id).addEventListener('input',()=>{clearTimeout(typing);typing=setTimeout(()=>{const v=num(document.getElementById(id).value);if(v!==null&&v>=-2&&v<=2){stopMorph();state[key]=v;changed(false);document.getElementById('coord').textContent='RE(c) '+fmt(state.real)+'   IM(c) '+fmt(state.imag);}},170);});
@@ -332,13 +266,129 @@
   document.getElementById('save').addEventListener('click',()=>{paint();canvas.toBlob(blob=>{if(!blob){announce('PNG export failed');return;}const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`fractal-portal-${state.preset}-${Date.now()}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);announce('PNG saved');},'image/png');});
   document.getElementById('share').addEventListener('click',async()=>{updateUrl();const link=location.href;try{await navigator.clipboard.writeText(link);announce('Link copied');document.getElementById('share').textContent='✓ Copied';setTimeout(()=>document.getElementById('share').textContent='↗ Copy link',1600);}catch(_){const input=document.createElement('textarea');input.value=link;document.body.append(input);input.select();document.execCommand('copy');input.remove();announce('Link selected for sharing');}});
   function morphLoop(t){if(!morph)return;const elapsed=(t-morphStart)*.00016;state.real=morphBase[0]+.006*Math.sin(elapsed);state.imag=morphBase[1]+.006*Math.cos(elapsed)-.006;sync();requestPaint();setTimeout(()=>{if(morph)requestAnimationFrame(morphLoop);},gl?85:380);}
-  document.getElementById('morph').addEventListener('click',()=>{if(morph){stopMorph();announce('Morph paused');return;}morph=true;morphBase=[state.real,state.imag];morphStart=performance.now();document.getElementById('morph').textContent='Ⅱ Stop morph';document.getElementById('morph').setAttribute('aria-pressed','true');requestAnimationFrame(morphLoop);announce('Live morph started');});
+  document.getElementById('morph').addEventListener('click',()=>{if(morph){stopMorph();announce('Morph paused');return;}morph=true;morphBase=[state.real,state.imag];morphStart=performance.now();document.getElementById('morph').textContent='Pause';document.getElementById('morph').setAttribute('aria-pressed','true');requestAnimationFrame(morphLoop);announce('Live morph started');});
   window.addEventListener('resize',requestPaint);new ResizeObserver(requestPaint).observe(canvas);
-  if(gl)canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();status.textContent='GPU CONTEXT LOST';document.getElementById('fallback').style.display='flex';});
+  if(gl)canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();status.textContent='GPU CONTEXT LOST';document.getElementById('fallback').textContent='Graphics context lost. Reload the page to restart rendering.';document.getElementById('fallback').style.display='flex';});
+
+  // V3 additions: history, named discoveries, guided routes, and HD export.
+  const DISCOVERIES_KEY = 'fractal-portal:v3:discoveries';
+  const HISTORY_LIMIT = 60;
+  const safeState = () => ({real:state.real,imag:state.imag,cx:state.cx,cy:state.cy,zoom:state.zoom,iterations:state.iterations,glow:state.glow,palette:state.palette,preset:state.preset});
+  function validSnapshot(s){
+    return !!s && typeof s==='object' && ['real','imag','cx','cy','zoom','iterations','glow'].every(k=>Number.isFinite(s[k]))
+      && Math.abs(s.real)<=2 && Math.abs(s.imag)<=2 && Math.abs(s.cx)<=4 && Math.abs(s.cy)<=4
+      && s.zoom>=.5 && s.zoom<=32 && s.iterations>=60 && s.iterations<=280 && s.glow>=0 && s.glow<=1.5
+      && paletteKeys.includes(s.palette) && typeof s.preset==='string' && Object.prototype.hasOwnProperty.call(presets,s.preset);
+  }
+  const undoStack=[],redoStack=[];
+  let lastHistory=JSON.stringify(safeState());
+  function recordHistory(){const current=JSON.stringify(safeState());if(current!==lastHistory){undoStack.push(JSON.parse(lastHistory));if(undoStack.length>HISTORY_LIMIT)undoStack.shift();redoStack.length=0;lastHistory=current;updateHistoryUI();}}
+  function markHistoryBoundary(){recordHistory();lastHistory=JSON.stringify(safeState());updateHistoryUI();}
+  function restoreSnapshot(next,savePrevious=false){if(!validSnapshot(next))return;if(savePrevious){recordHistory();undoStack.push(safeState());if(undoStack.length>HISTORY_LIMIT)undoStack.shift();redoStack.length=0;}restoringHistory=true;stopMorph();state={...state,...next};lastHistory=JSON.stringify(safeState());changed();restoringHistory=false;updateHistoryUI();}
+  function travelHistory(direction){recordHistory();const source=direction==='undo'?undoStack:redoStack;const dest=direction==='undo'?redoStack:undoStack;if(!source.length)return;dest.push(safeState());restoreSnapshot(source.pop());announce(direction==='undo'?'Previous view restored':'Next view restored');}
+  const undoButton=document.getElementById('undo'),redoButton=document.getElementById('redo');
+  function updateHistoryUI(){undoButton.disabled=undoStack.length===0;redoButton.disabled=redoStack.length===0;}
+  undoButton.addEventListener('click',()=>travelHistory('undo'));
+  redoButton.addEventListener('click',()=>travelHistory('redo'));
+  // Event capture snapshots BEFORE the original V2 controls mutate the state.
+  for(const id of ['real','imag','zoom','iterations','glow','palette']){
+    let input=document.getElementById(id);
+    input.addEventListener('focus',recordHistory,{capture:true});
+    input.addEventListener('pointerdown',recordHistory,{capture:true});
+    input.addEventListener('change',()=>{setTimeout(markHistoryBoundary,210);});
+  }
+  document.querySelectorAll('[data-preset]').forEach(el=>el.addEventListener('click',recordHistory,{capture:true}));
+  document.getElementById('reset').addEventListener('click',recordHistory,{capture:true});
+  canvas.addEventListener('pointerdown',recordHistory,{capture:true});
+  canvas.addEventListener('pointerup',markHistoryBoundary);
+  let wheelTimer=0;
+  canvas.addEventListener('wheel',()=>{recordHistory();clearTimeout(wheelTimer);wheelTimer=setTimeout(markHistoryBoundary,250);},{passive:true,capture:true});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){closeModal();closeSaved();document.getElementById('help-panel').hidden=true;return;}
+    const element=document.activeElement;
+    if(element && (['INPUT','TEXTAREA','SELECT'].includes(element.tagName) || element.isContentEditable))return;
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){e.preventDefault();travelHistory(e.shiftKey?'redo':'undo');}
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){e.preventDefault();travelHistory('redo');}
+  });
+  // Discovery library: locally stored, explicit user save, validated on import.
+  let discoveries=[];
+  function readDiscoveries(){try{const data=JSON.parse(localStorage.getItem(DISCOVERIES_KEY)||'[]');return Array.isArray(data)?data.filter(d=>typeof d.name==='string'&&d.name.length<=70&&validSnapshot(d.state)).slice(0,40):[];}catch(_){return [];}}
+  function persist(){try{localStorage.setItem(DISCOVERIES_KEY,JSON.stringify(discoveries));return true;}catch(_){announce('Browser storage is unavailable. Try exporting a link instead.');return false;}}
+  discoveries=readDiscoveries();
+  const savedPanel=document.getElementById('saved-panel'),modal=document.getElementById('save-modal'),nameInput=document.getElementById('discovery-name');
+  function closeModal(){modal.hidden=true;}
+  function closeSaved(){savedPanel.hidden=true;document.getElementById('saved-toggle').setAttribute('aria-expanded','false');}
+  function drawSaved(){
+    const target=document.getElementById('saved-list');target.replaceChildren();
+    document.getElementById('saved-count').textContent=String(discoveries.length);
+    if(!discoveries.length){const p=document.createElement('p');p.className='empty';p.textContent='Nothing saved yet. Explore the fractal and save your first location.';target.append(p);return;}
+    for(const d of discoveries){
+      const card=document.createElement('article');card.className='saved-item';
+      const content=document.createElement('div');content.className='saved-content';
+      const h=document.createElement('strong');h.textContent=d.name;
+      const hint=document.createElement('small');hint.textContent=`${d.state.real.toFixed(5)} ${d.state.imag<0?'−':'+'} ${Math.abs(d.state.imag).toFixed(5)}i · ${d.state.zoom.toFixed(2)}×`;
+      content.append(h,hint);
+      const buttons=document.createElement('div');buttons.className='saved-actions';
+      const open=document.createElement('button');open.type='button';open.className='btn small';open.textContent='Open';open.addEventListener('click',()=>{recordHistory();restoreSnapshot(d.state,true);closeSaved();announce('Discovery loaded');});
+      const del=document.createElement('button');del.type='button';del.className='btn small ghost';del.setAttribute('aria-label','Delete '+d.name);del.textContent='×';del.addEventListener('click',()=>{discoveries=discoveries.filter(x=>x.id!==d.id);persist();drawSaved();});
+      buttons.append(open,del);card.append(content,buttons);target.append(card);
+    }
+  }
+  document.getElementById('save-discovery').addEventListener('click',()=>{stopMorph();nameInput.value=`Discovery ${String(discoveries.length+1).padStart(2,'0')}`;modal.hidden=false;nameInput.focus();nameInput.select();});
+  document.getElementById('modal-cancel').addEventListener('click',closeModal);
+  modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});
+  document.getElementById('discovery-form').addEventListener('submit',e=>{
+    e.preventDefault();const name=nameInput.value.trim().slice(0,70);if(!name)return;
+    const entry={id:String(Date.now())+'-'+String(Math.floor(Math.random()*1e6)),name,state:safeState()};
+    discoveries.unshift(entry);discoveries=discoveries.slice(0,40);persist();drawSaved();closeModal();announce(`Saved ${name}`);
+  });
+  document.getElementById('saved-toggle').addEventListener('click',()=>{savedPanel.hidden=!savedPanel.hidden;document.getElementById('saved-toggle').setAttribute('aria-expanded',String(!savedPanel.hidden));if(!savedPanel.hidden){drawSaved();}});
+  document.getElementById('saved-close').addEventListener('click',closeSaved);
+  document.getElementById('clear-saved').addEventListener('click',()=>{if(!discoveries.length)return;if(window.confirm('Delete all locally saved discoveries?')){discoveries=[];persist();drawSaved();}});
+  drawSaved();
+  // The guide is a set of math-interesting starting parameters; no fake deep precision.
+  const tourStops=[
+    {name:'The first spiral',preset:'aurora',state:{...presets.aurora,cx:0,cy:0,iterations:180,glow:.75,preset:'aurora'}},
+    {name:'Twin branches',preset:'ember',state:{...presets.ember,cx:0,cy:0,iterations:210,glow:.8,preset:'ember'}},
+    {name:'Sea of curls',preset:'coral',state:{...presets.coral,cx:0,cy:0,iterations:220,glow:.7,preset:'coral'}},
+    {name:'Frozen orbit',preset:'frost',state:{...presets.frost,cx:0,cy:0,iterations:210,glow:.7,preset:'frost'}}
+  ];
+  let tourIndex=0;
+  document.getElementById('tour').addEventListener('click',()=>{
+    const stop=tourStops[tourIndex++%tourStops.length];restoreSnapshot(stop.state,true);document.getElementById('tour-note').textContent=`Route ${((tourIndex-1)%tourStops.length)+1}/4 · ${stop.name}`;announce('Exploring '+stop.name);
+  });
+  // High-resolution export via rendering to the SAME WebGL canvas, then returning to screen size.
+  // GPU only; CPU path safely uses standard export without blocking the browser.
+  document.getElementById('export-hd').addEventListener('click',()=>{
+    if(!gl){document.getElementById('save').click();announce('CPU mode: exported standard resolution');return;}
+    const oldW=canvas.width,oldH=canvas.height;
+    const factor=Math.min(2,3200/Math.max(oldW,oldH));
+    const w=Math.max(1,Math.floor(oldW*factor)),h=Math.max(1,Math.floor(oldH*factor));
+    if(w===oldW&&h===oldH){document.getElementById('save').click();return;}
+    try{
+      canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);
+      gl.uniform2f(U.resolution,w,h);gl.uniform2f(U.center,state.cx,state.cy);gl.uniform2f(U.c,state.real,state.imag);
+      gl.uniform1f(U.zoom,state.zoom);gl.uniform1f(U.glow,state.glow);gl.uniform1i(U.maxiter,state.iterations);gl.uniform1i(U.palette,paletteKeys.indexOf(state.palette));
+      gl.drawArrays(gl.TRIANGLES,0,3);
+      canvas.toBlob(blob=>{
+        if(blob){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`fractal-portal-v3-${Date.now()}-HD.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);announce(`Exported ${w} × ${h} PNG`);}
+        canvas.width=oldW;canvas.height=oldH;gl.viewport(0,0,oldW,oldH);requestPaint();
+      },'image/png');
+    } catch(error){console.warn(error);canvas.width=oldW;canvas.height=oldH;gl.viewport(0,0,oldW,oldH);requestPaint();announce('HD export unavailable');}
+  });
+  document.getElementById('fullscreen').addEventListener('click',async()=>{
+    try{if(document.fullscreenElement)await document.exitFullscreen();else await document.getElementById('viewbox').requestFullscreen();}catch(_){announce('Fullscreen is unavailable');}
+  });
+  document.addEventListener('fullscreenchange',requestPaint);
+  const help=document.getElementById('help-panel');
+  document.getElementById('help-toggle').addEventListener('click',()=>{help.hidden=!help.hidden;});
+  document.getElementById('help-close').addEventListener('click',()=>{help.hidden=true;});
+  updateHistoryUI();
+
   sync();requestPaint();
   // Expose read-only diagnostics to browser smoke tests and accessibility tooling.
   window.FractalPortalDiagnostics=()=>({palette:state.palette,preset:state.preset,real:state.real,imag:state.imag,zoom:state.zoom,width:canvas.width,height:canvas.height,frameCount,webgl:!!program});
 })();
+
 </script>
-</body>
-</html>
+</body></html>
