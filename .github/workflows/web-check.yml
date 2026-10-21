@@ -1,0 +1,37 @@
+name: Verify interactive explorer
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Install Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Check webpage structure and math features
+        run: python -m unittest -v test_web_explorer
+
+      - name: Check JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path('index.html').read_text(encoding='utf-8')
+          scripts = re.findall(r'<script>(.*?)</script>', html, flags=re.DOTALL)
+          assert len(scripts) == 1, 'Expected one inline JavaScript program'
+          Path('web-portal-check.js').write_text(scripts[0], encoding='utf-8')
+          PY
+          node --check web-portal-check.js
